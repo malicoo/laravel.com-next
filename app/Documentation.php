@@ -4,29 +4,28 @@ namespace App;
 
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Contracts\Cache\Repository as Cache;
-use ParsedownExtra;
 
 class Documentation
 {
     /**
      * The filesystem implementation.
      *
-     * @var Filesystem
+     * @var \Illuminate\Filesystem\Filesystem
      */
     protected $files;
 
     /**
      * The cache implementation.
      *
-     * @var Cache
+     * @var \Illuminate\Contracts\Cache\Repository
      */
     protected $cache;
 
     /**
      * Create a new documentation instance.
      *
-     * @param  Filesystem  $files
-     * @param  Cache  $cache
+     * @param  \Illuminate\Filesystem\Filesystem  $files
+     * @param  \Illuminate\Contracts\Cache\Repository  $cache
      * @return void
      */
     public function __construct(Filesystem $files, Cache $cache)
@@ -39,7 +38,7 @@ class Documentation
      * Get the documentation index page.
      *
      * @param  string  $version
-     * @return string
+     * @return string|null
      */
     public function getIndex($version)
     {
@@ -47,7 +46,7 @@ class Documentation
             $path = base_path('resources/docs/'.$version.'/documentation.md');
 
             if ($this->files->exists($path)) {
-                return $this->replaceLinks($version, (new ParsedownExtra())->text($this->files->get($path)));
+                return $this->replaceLinks($version, (new Parsedown())->text($this->files->get($path)));
             }
 
             return null;
@@ -59,7 +58,7 @@ class Documentation
      *
      * @param  string  $version
      * @param  string  $page
-     * @return string
+     * @return string|null
      */
     public function get($version, $page)
     {
@@ -67,7 +66,7 @@ class Documentation
             $path = base_path('resources/docs/'.$version.'/'.$page.'.md');
 
             if ($this->files->exists($path)) {
-                return $this->replaceLinks($version, (new ParsedownExtra)->text($this->files->get($path)));
+                return $this->replaceLinks($version, (new Parsedown)->text($this->files->get($path)));
             }
 
             return null;
@@ -101,6 +100,20 @@ class Documentation
     }
 
     /**
+     * Determine which versions a page exists in.
+     *
+     * @param  string  $page
+     * @return \Illuminate\Support\Collection
+     */
+    public function versionsContainingPage($page)
+    {
+        return collect(static::getDocVersions())
+            ->filter(function ($version) use ($page) {
+                return $this->sectionExists($version, $page);
+            });
+    }
+
+    /**
      * Get the publicly available versions of the documentation
      *
      * @return array
@@ -109,6 +122,8 @@ class Documentation
     {
         return [
             'master' => 'Master',
+            '8.x' => '8.x',
+            '7.x' => '7.x',
             '6.x' => '6.x',
             // '6.0' => '6.0',
             '5.8' => '5.8',
